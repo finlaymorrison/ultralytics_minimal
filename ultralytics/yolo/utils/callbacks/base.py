@@ -186,27 +186,3 @@ def get_default_callbacks():
         (defaultdict): A defaultdict with keys from default_callbacks and empty lists as default values.
     """
     return defaultdict(list, deepcopy(default_callbacks))
-
-
-def add_integration_callbacks(instance):
-    """
-    Add integration callbacks from various sources to the instance's callbacks.
-
-    Args:
-        instance (Trainer, Predictor, Validator, Exporter): An object with a 'callbacks' attribute that is a dictionary
-            of callback lists.
-    """
-    from .clearml import callbacks as clearml_cb
-    from .comet import callbacks as comet_cb
-    from .dvc import callbacks as dvc_cb
-    from .hub import callbacks as hub_cb
-    from .mlflow import callbacks as mlflow_cb
-    from .neptune import callbacks as neptune_cb
-    from .raytune import callbacks as tune_cb
-    from .tensorboard import callbacks as tensorboard_cb
-    from .wb import callbacks as wb_cb
-
-    for x in clearml_cb, comet_cb, hub_cb, mlflow_cb, neptune_cb, tune_cb, tensorboard_cb, wb_cb, dvc_cb:
-        for k, v in x.items():
-            if v not in instance.callbacks[k]:  # prevent duplicate callbacks addition
-                instance.callbacks[k].append(v)  # callback[name].append(func)

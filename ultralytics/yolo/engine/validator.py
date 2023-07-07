@@ -106,7 +106,6 @@ class BaseValidator:
             self.args.plots = trainer.stopper.possible_stop or (trainer.epoch == trainer.epochs - 1)
             model.eval()
         else:
-            callbacks.add_integration_callbacks(self)
             self.run_callbacks('on_val_start')
             assert model is not None, 'Either trainer or model is needed for validation'
             self.device = select_device(self.args.device, self.args.batch)
