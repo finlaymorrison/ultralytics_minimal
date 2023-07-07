@@ -320,15 +320,8 @@ class Results(SimpleClass):
                          file=save_dir / self.names[int(d.cls)] / f'{file_name.stem}.jpg',
                          BGR=True)
 
-    def pandas(self):
-        """Convert the object to a pandas DataFrame (not yet implemented)."""
-        LOGGER.warning("WARNING ⚠️ 'Results.pandas' method is not yet implemented.")
-
     def tojson(self, normalize=False):
         """Convert the object to JSON format."""
-        if self.probs is not None:
-            LOGGER.warning('Warning: Classify task do not support `tojson` yet.')
-            return
 
         import json
 
@@ -509,100 +502,3 @@ class Masks(BaseTensor):
     def pandas(self):
         """Convert the object to a pandas DataFrame (not yet implemented)."""
         LOGGER.warning("WARNING ⚠️ 'Masks.pandas' method is not yet implemented.")
-
-
-class Keypoints(BaseTensor):
-    """
-    A class for storing and manipulating detection keypoints.
-
-    Args:
-        keypoints (torch.Tensor | np.ndarray): A tensor containing the detection keypoints, with shape (num_dets, num_kpts, 2/3).
-        orig_shape (tuple): Original image size, in the format (height, width).
-
-    Attributes:
-        keypoints (torch.Tensor | np.ndarray): A tensor containing the detection keypoints, with shape (num_dets, num_kpts, 2/3).
-        orig_shape (tuple): Original image size, in the format (height, width).
-
-    Properties:
-        xy (list): A list of keypoints (pixels) which includes x, y keypoints of each detection.
-        xyn (list): A list of keypoints (normalized) which includes x, y keypoints of each detection.
-
-    Methods:
-        cpu(): Returns a copy of the keypoints tensor on CPU memory.
-        numpy(): Returns a copy of the keypoints tensor as a numpy array.
-        cuda(): Returns a copy of the keypoints tensor on GPU memory.
-        to(): Returns a copy of the keypoints tensor with the specified device and dtype.
-    """
-
-    def __init__(self, keypoints, orig_shape) -> None:
-        if keypoints.ndim == 2:
-            keypoints = keypoints[None, :]
-        super().__init__(keypoints, orig_shape)
-        self.has_visible = self.data.shape[-1] == 3
-
-    @property
-    @lru_cache(maxsize=1)
-    def xy(self):
-        return self.data[..., :2]
-
-    @property
-    @lru_cache(maxsize=1)
-    def xyn(self):
-        xy = self.xy.clone() if isinstance(self.xy, torch.Tensor) else np.copy(self.xy)
-        xy[..., 0] /= self.orig_shape[1]
-        xy[..., 1] /= self.orig_shape[0]
-        return xy
-
-    @property
-    @lru_cache(maxsize=1)
-    def conf(self):
-        return self.data[..., 2] if self.has_visible else None
-
-
-class Probs(BaseTensor):
-    """
-    A class for storing and manipulating classify predictions.
-
-    Args:
-        probs (torch.Tensor | np.ndarray): A tensor containing the detection keypoints, with shape (num_class, ).
-
-    Attributes:
-        probs (torch.Tensor | np.ndarray): A tensor containing the detection keypoints, with shape (num_class).
-
-    Properties:
-        top5 (list[int]): Top 1 indice.
-        top1 (int): Top 5 indices.
-
-    Methods:
-        cpu(): Returns a copy of the probs tensor on CPU memory.
-        numpy(): Returns a copy of the probs tensor as a numpy array.
-        cuda(): Returns a copy of the probs tensor on GPU memory.
-        to(): Returns a copy of the probs tensor with the specified device and dtype.
-    """
-
-    def __init__(self, probs, orig_shape=None) -> None:
-        super().__init__(probs, orig_shape)
-
-    @property
-    @lru_cache(maxsize=1)
-    def top5(self):
-        """Return the indices of top 5."""
-        return (-self.data).argsort(0)[:5].tolist()  # this way works with both torch and numpy.
-
-    @property
-    @lru_cache(maxsize=1)
-    def top1(self):
-        """Return the indices of top 1."""
-        return int(self.data.argmax())
-
-    @property
-    @lru_cache(maxsize=1)
-    def top5conf(self):
-        """Return the confidences of top 5."""
-        return self.data[self.top5]
-
-    @property
-    @lru_cache(maxsize=1)
-    def top1conf(self):
-        """Return the confidences of top 1."""
-        return self.data[self.top1]

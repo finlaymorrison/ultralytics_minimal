@@ -86,8 +86,6 @@ class YOLO:
 
         # Load or create new YOLO model
         suffix = Path(model).suffix
-        if not suffix and Path(model).stem in GITHUB_ASSET_STEMS:
-            model, suffix = Path(model).with_suffix('.pt'), '.pt'  # add suffix, i.e. yolov8n -> yolov8n.pt
         if suffix == '.yaml':
             self._new(model, task)
         else:
@@ -130,17 +128,11 @@ class YOLO:
             weights (str): model checkpoint to be loaded
             task (str | None): model task
         """
-        suffix = Path(weights).suffix
-        if suffix == '.pt':
-            self.model, self.ckpt = attempt_load_one_weight(weights)
-            self.task = self.model.args['task']
-            self.overrides = self.model.args = self._reset_ckpt_args(self.model.args)
-            self.ckpt_path = self.model.pt_path
-        else:
-            weights = check_file(weights)
-            self.model, self.ckpt = weights, None
-            self.task = task or guess_model_task(weights)
-            self.ckpt_path = weights
+        self.model, self.ckpt = attempt_load_one_weight(weights)
+        self.task = self.model.args['task']
+        self.overrides = self.model.args = self._reset_ckpt_args(self.model.args)
+        self.ckpt_path = self.model.pt_path
+
         self.overrides['model'] = weights
         self.overrides['task'] = self.task
 
@@ -155,19 +147,6 @@ class YOLO:
                             f'PyTorch models can be used to train, val, predict and export, i.e. '
                             f"'yolo export model=yolov8n.pt', but exported formats like ONNX, TensorRT etc. only "
                             f"support 'predict' and 'val' modes, i.e. 'yolo predict model=yolov8n.onnx'.")
-
-    @smart_inference_mode()
-    def reset_weights(self):
-        """
-        Resets the model modules parameters to randomly initialized values, losing all training information.
-        """
-        self._check_is_pytorch_model()
-        for m in self.model.modules():
-            if hasattr(m, 'reset_parameters'):
-                m.reset_parameters()
-        for p in self.model.parameters():
-            p.requires_grad = True
-        return self
 
     @smart_inference_mode()
     def load(self, weights='yolov8n.pt'):
@@ -232,29 +211,6 @@ class YOLO:
             if 'project' in overrides or 'name' in overrides:
                 self.predictor.save_dir = self.predictor.get_save_dir()
         return self.predictor.predict_cli(source=source) if is_cli else self.predictor(source=source, stream=stream)
-
-    def track(self, source=None, stream=False, persist=False, **kwargs):
-        """
-        Perform object tracking on the input source using the registered trackers.
-
-        Args:
-            source (str, optional): The input source for object tracking. Can be a file path or a video stream.
-            stream (bool, optional): Whether the input source is a video stream. Defaults to False.
-            persist (bool, optional): Whether to persist the trackers if they already exist. Defaults to False.
-            **kwargs (optional): Additional keyword arguments for the tracking process.
-
-        Returns:
-            (List[ultralytics.yolo.engine.results.Results]): The tracking results.
-
-        """
-        if not hasattr(self.predictor, 'trackers'):
-            from ultralytics.tracker import register_tracker
-            register_tracker(self, persist)
-        # ByteTrack-based method needs low confidence predictions as input
-        conf = kwargs.get('conf') or 0.1
-        kwargs['conf'] = conf
-        kwargs['mode'] = 'track'
-        return self.predict(source=source, stream=stream, **kwargs)
 
     @smart_inference_mode()
     def val(self, data=None, **kwargs):
@@ -365,28 +321,6 @@ class YOLO:
         """
         self._check_is_pytorch_model()
         self.model.to(device)
-
-    def tune(self, *args, **kwargs):
-        """
-        Runs hyperparameter tuning using Ray Tune.
-
-        Args:
-            data (str): The dataset to run the tuner on.
-            space (dict, optional): The hyperparameter search space. Defaults to None.
-            grace_period (int, optional): The grace period in epochs of the ASHA scheduler. Defaults to 10.
-            gpu_per_trial (int, optional): The number of GPUs to allocate per trial. Defaults to None.
-            max_samples (int, optional): The maximum number of trials to run. Defaults to 10.
-            train_args (dict, optional): Additional arguments to pass to the `train()` method. Defaults to {}.
-
-        Returns:
-            (dict): A dictionary containing the results of the hyperparameter search.
-
-        Raises:
-            ModuleNotFoundError: If Ray Tune is not installed.
-        """
-        self._check_is_pytorch_model()
-        from ultralytics.yolo.utils.tuner import run_ray_tune
-        return run_ray_tune(self, *args, **kwargs)
 
     @property
     def names(self):

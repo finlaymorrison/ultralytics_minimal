@@ -301,7 +301,6 @@ def check_file(file, suffix='', download=True, hard=True):
             raise FileNotFoundError(f"Multiple files match '{file}', specify exact path: {files}")
         return files[0] if len(files) else []  # return file
 
-
 def check_yaml(file, suffix=('.yaml', '.yml'), hard=True):
     """Search/download YAML file (if necessary) and return path, checking suffix."""
     return check_file(file, suffix, hard=hard)
