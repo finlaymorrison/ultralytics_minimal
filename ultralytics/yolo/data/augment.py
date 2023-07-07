@@ -13,11 +13,9 @@ from ..utils import LOGGER, colorstr
 from ..utils.checks import check_version
 from ..utils.instance import Instances
 from ..utils.metrics import bbox_ioa
-from ..utils.ops import segment2box
 from .utils import polygons2masks, polygons2masks_overlap
 
 POSE_FLIPLR_INDEX = [0, 2, 1, 4, 3, 6, 5, 8, 7, 10, 9, 12, 11, 14, 13, 16, 15]
-
 
 # TODO: we might need a BaseTransform to make all these augments be compatible with both classification and semantic
 class BaseTransform:
@@ -369,54 +367,6 @@ class RandomPerspective:
         x = xy[:, [0, 2, 4, 6]]
         y = xy[:, [1, 3, 5, 7]]
         return np.concatenate((x.min(1), y.min(1), x.max(1), y.max(1)), dtype=bboxes.dtype).reshape(4, n).T
-
-    def apply_segments(self, segments, M):
-        """
-        Apply affine to segments and generate new bboxes from segments.
-
-        Args:
-            segments (ndarray): list of segments, [num_samples, 500, 2].
-            M (ndarray): affine matrix.
-
-        Returns:
-            new_segments (ndarray): list of segments after affine, [num_samples, 500, 2].
-            new_bboxes (ndarray): bboxes after affine, [N, 4].
-        """
-        n, num = segments.shape[:2]
-        if n == 0:
-            return [], segments
-
-        xy = np.ones((n * num, 3), dtype=segments.dtype)
-        segments = segments.reshape(-1, 2)
-        xy[:, :2] = segments
-        xy = xy @ M.T  # transform
-        xy = xy[:, :2] / xy[:, 2:3]
-        segments = xy.reshape(n, -1, 2)
-        bboxes = np.stack([segment2box(xy, self.size[0], self.size[1]) for xy in segments], 0)
-        return bboxes, segments
-
-    def apply_keypoints(self, keypoints, M):
-        """
-        Apply affine to keypoints.
-
-        Args:
-            keypoints (ndarray): keypoints, [N, 17, 3].
-            M (ndarray): affine matrix.
-
-        Return:
-            new_keypoints (ndarray): keypoints after affine, [N, 17, 3].
-        """
-        n, nkpt = keypoints.shape[:2]
-        if n == 0:
-            return keypoints
-        xy = np.ones((n * nkpt, 3), dtype=keypoints.dtype)
-        visible = keypoints[..., 2].reshape(n * nkpt, 1)
-        xy[:, :2] = keypoints[..., :2].reshape(n * nkpt, 2)
-        xy = xy @ M.T  # transform
-        xy = xy[:, :2] / xy[:, 2:3]  # perspective rescale or affine
-        out_mask = (xy[:, 0] < 0) | (xy[:, 1] < 0) | (xy[:, 0] > self.size[0]) | (xy[:, 1] > self.size[1])
-        visible[out_mask] = 0
-        return np.concatenate([xy, visible], axis=-1).reshape(n, nkpt, 3)
 
     def __call__(self, labels):
         """
