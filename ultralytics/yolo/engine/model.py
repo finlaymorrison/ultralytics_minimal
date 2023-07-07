@@ -84,12 +84,6 @@ class YOLO:
         self.session = None  # HUB session
         model = str(model).strip()  # strip spaces
 
-        # Check if Ultralytics HUB model from https://hub.ultralytics.com
-        if self.is_hub_model(model):
-            from ultralytics.hub.session import HUBTrainingSession
-            self.session = HUBTrainingSession(model)
-            model = self.session.model_file
-
         # Load or create new YOLO model
         suffix = Path(model).suffix
         if not suffix and Path(model).stem in GITHUB_ASSET_STEMS:
@@ -107,14 +101,6 @@ class YOLO:
         """Raises error if object has no requested attribute."""
         name = self.__class__.__name__
         raise AttributeError(f"'{name}' object has no attribute '{attr}'. See valid attributes below.\n{self.__doc__}")
-
-    @staticmethod
-    def is_hub_model(model):
-        """Check if the provided model is a HUB model."""
-        return any((
-            model.startswith('https://hub.ultralytics.com/models/'),  # i.e. https://hub.ultralytics.com/models/MODEL_ID
-            [len(x) for x in model.split('_')] == [42, 20],  # APIKEY_MODELID
-            len(model) == 20 and not Path(model).exists() and all(x not in model for x in './\\')))  # MODELID
 
     def _new(self, cfg: str, task=None, verbose=True):
         """
