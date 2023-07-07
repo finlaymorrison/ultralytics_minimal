@@ -8,7 +8,6 @@ from ultralytics import yolo  # noqa
 from ultralytics.nn.tasks import (DetectionModel,
                                   attempt_load_one_weight, guess_model_task, nn, yaml_model_load)
 from ultralytics.yolo.cfg import get_cfg
-from ultralytics.yolo.engine.exporter import Exporter
 from ultralytics.yolo.utils import (DEFAULT_CFG, DEFAULT_CFG_DICT, DEFAULT_CFG_KEYS, LOGGER, RANK, ROOT, callbacks,
                                     is_git_dir, yaml_load)
 from ultralytics.yolo.utils.checks import check_imgsz, check_pip_update_available, check_yaml
@@ -255,25 +254,6 @@ class YOLO:
         overrides['mode'] = 'benchmark'
         overrides = {**DEFAULT_CFG_DICT, **overrides}  # fill in missing overrides keys with defaults
         return benchmark(model=self, imgsz=overrides['imgsz'], half=overrides['half'], device=overrides['device'])
-
-    def export(self, **kwargs):
-        """
-        Export model.
-
-        Args:
-            **kwargs : Any other args accepted by the predictors. To see all args check 'configuration' section in docs
-        """
-        self._check_is_pytorch_model()
-        overrides = self.overrides.copy()
-        overrides.update(kwargs)
-        overrides['mode'] = 'export'
-        if overrides.get('imgsz') is None:
-            overrides['imgsz'] = self.model.args['imgsz']  # use trained imgsz unless custom value is passed
-        if 'batch' not in kwargs:
-            overrides['batch'] = 1  # default to 1 if not modified
-        args = get_cfg(cfg=DEFAULT_CFG, overrides=overrides)
-        args.task = self.task
-        return Exporter(overrides=args, _callbacks=self.callbacks)(model=self.model)
 
     def train(self, **kwargs):
         """
