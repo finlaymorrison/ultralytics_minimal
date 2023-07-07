@@ -22,7 +22,6 @@ class DetectionValidator(BaseValidator):
         """Initialize detection model with necessary variables and settings."""
         super().__init__(dataloader, save_dir, pbar, args, _callbacks)
         self.args.task = 'detect'
-        self.is_coco = False
         self.class_map = None
         self.metrics = DetMetrics(save_dir=self.save_dir, on_plot=self.on_plot)
         self.iouv = torch.linspace(0.5, 0.95, 10)  # iou vector for mAP@0.5:0.95
@@ -45,7 +44,7 @@ class DetectionValidator(BaseValidator):
         """Initialize evaluation metrics for YOLO."""
         val = self.data.get(self.args.split, '')  # validation path
         self.is_coco = isinstance(val, str) and 'coco' in val and val.endswith(f'{os.sep}val2017.txt')  # is COCO
-        self.class_map = ops.coco80_to_coco91_class() if self.is_coco else list(range(1000))
+        self.class_map = list(range(1000))
         self.args.save_json |= self.is_coco and not self.training  # run on final val if training COCO
         self.names = model.names
         self.nc = len(model.names)

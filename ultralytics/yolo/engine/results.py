@@ -470,35 +470,7 @@ class Masks(BaseTensor):
         super().__init__(masks, orig_shape)
 
     @property
-    @lru_cache(maxsize=1)
-    def segments(self):
-        """Return segments (deprecated; normalized)."""
-        LOGGER.warning("WARNING ⚠️ 'Masks.segments' is deprecated. Use 'Masks.xyn' for segments (normalized) and "
-                       "'Masks.xy' for segments (pixels) instead.")
-        return self.xyn
-
-    @property
-    @lru_cache(maxsize=1)
-    def xyn(self):
-        """Return segments (normalized)."""
-        return [
-            ops.scale_coords(self.data.shape[1:], x, self.orig_shape, normalize=True)
-            for x in ops.masks2segments(self.data)]
-
-    @property
-    @lru_cache(maxsize=1)
-    def xy(self):
-        """Return segments (pixels)."""
-        return [
-            ops.scale_coords(self.data.shape[1:], x, self.orig_shape, normalize=False)
-            for x in ops.masks2segments(self.data)]
-
-    @property
     def masks(self):
         """Return the raw masks tensor (deprecated)."""
         LOGGER.warning("WARNING ⚠️ 'Masks.masks' is deprecated. Use 'Masks.data' instead.")
         return self.data
-
-    def pandas(self):
-        """Convert the object to a pandas DataFrame (not yet implemented)."""
-        LOGGER.warning("WARNING ⚠️ 'Masks.pandas' method is not yet implemented.")

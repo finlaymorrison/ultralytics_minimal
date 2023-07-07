@@ -7,11 +7,10 @@ from pathlib import Path
 import cv2
 import numpy as np
 import torch
-import torchvision
 from tqdm import tqdm
 
 from ..utils import LOCAL_RANK, NUM_THREADS, TQDM_BAR_FORMAT, is_dir_writeable
-from .augment import Compose, Format, Instances, LetterBox, classify_albumentations, classify_transforms, v8_transforms
+from .augment import Compose, Format, Instances, LetterBox, v8_transforms
 from .base import BaseDataset
 from .utils import HELP_URL, LOGGER, get_hash, img2label_paths, verify_image_label
 
@@ -197,78 +196,3 @@ class YOLODataset(BaseDataset):
             new_batch['batch_idx'][i] += i  # add target image index for build_targets()
         new_batch['batch_idx'] = torch.cat(new_batch['batch_idx'], 0)
         return new_batch
-
-
-# Classification dataloaders -------------------------------------------------------------------------------------------
-class ClassificationDataset(torchvision.datasets.ImageFolder):
-    """
-    YOLO Classification Dataset.
-
-    Args:
-        root (str): Dataset path.
-
-    Attributes:
-        cache_ram (bool): True if images should be cached in RAM, False otherwise.
-        cache_disk (bool): True if images should be cached on disk, False otherwise.
-        samples (list): List of samples containing file, index, npy, and im.
-        torch_transforms (callable): torchvision transforms applied to the dataset.
-        album_transforms (callable, optional): Albumentations transforms applied to the dataset if augment is True.
-    """
-
-    def __init__(self, root, args, augment=False, cache=False):
-        """
-        Initialize YOLO object with root, image size, augmentations, and cache settings.
-
-        Args:
-            root (str): Dataset path.
-            args (Namespace): Argument parser containing dataset related settings.
-            augment (bool, optional): True if dataset should be augmented, False otherwise. Defaults to False.
-            cache (bool | str | optional): Cache setting, can be True, False, 'ram' or 'disk'. Defaults to False.
-        """
-        super().__init__(root=root)
-        if augment and args.fraction < 1.0:  # reduce training fraction
-            self.samples = self.samples[:round(len(self.samples) * args.fraction)]
-        self.cache_ram = cache is True or cache == 'ram'
-        self.cache_disk = cache == 'disk'
-        self.samples = [list(x) + [Path(x[0]).with_suffix('.npy'), None] for x in self.samples]  # file, index, npy, im
-        self.torch_transforms = classify_transforms(args.imgsz)
-        self.album_transforms = classify_albumentations(
-            augment=augment,
-            size=args.imgsz,
-            scale=(1.0 - args.scale, 1.0),  # (0.08, 1.0)
-            hflip=args.fliplr,
-            vflip=args.flipud,
-            hsv_h=args.hsv_h,  # HSV-Hue augmentation (fraction)
-            hsv_s=args.hsv_s,  # HSV-Saturation augmentation (fraction)
-            hsv_v=args.hsv_v,  # HSV-Value augmentation (fraction)
-            mean=(0.0, 0.0, 0.0),  # IMAGENET_MEAN
-            std=(1.0, 1.0, 1.0),  # IMAGENET_STD
-            auto_aug=False) if augment else None
-
-    def __getitem__(self, i):
-        """Returns subset of data and targets corresponding to given indices."""
-        f, j, fn, im = self.samples[i]  # filename, index, filename.with_suffix('.npy'), image
-        if self.cache_ram and im is None:
-            im = self.samples[i][3] = cv2.imread(f)
-        elif self.cache_disk:
-            if not fn.exists():  # load npy
-                np.save(fn.as_posix(), cv2.imread(f))
-            im = np.load(fn)
-        else:  # read image
-            im = cv2.imread(f)  # BGR
-        if self.album_transforms:
-            sample = self.album_transforms(image=cv2.cvtColor(im, cv2.COLOR_BGR2RGB))['image']
-        else:
-            sample = self.torch_transforms(im)
-        return {'img': sample, 'cls': j}
-
-    def __len__(self) -> int:
-        return len(self.samples)
-
-
-# TODO: support semantic segmentation
-class SemanticDataset(BaseDataset):
-
-    def __init__(self):
-        """Initialize a SemanticDataset object."""
-        super().__init__()
