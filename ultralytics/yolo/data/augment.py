@@ -21,6 +21,7 @@ POSE_FLIPLR_INDEX = [0, 2, 1, 4, 3, 6, 5, 8, 7, 10, 9, 12, 11, 14, 13, 16, 15]
 class BaseTransform:
 
     def __init__(self) -> None:
+        print("RJKADSJFD:AS"*100)
         pass
 
     def apply_image(self, labels):
