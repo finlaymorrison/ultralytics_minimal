@@ -14,7 +14,7 @@ from ultralytics.yolo.utils import (DEFAULT_CFG, DEFAULT_CFG_DICT, DEFAULT_CFG_P
                                     get_settings, yaml_load, yaml_print)
 
 # Define valid tasks and modes
-MODES = 'train', 'val', 'predict', 'export', 'track', 'benchmark'
+MODES = 'train', 'val', 'predict', 'export', 'track'
 TASKS = 'detect', 'segment', 'classify', 'pose'
 TASK2DATA = {
     'detect': 'coco128.yaml',
