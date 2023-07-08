@@ -7,7 +7,7 @@ from typing import List
 
 import numpy as np
 
-from .ops import ltwh2xywh, ltwh2xyxy, resample_segments, xywh2ltwh, xywh2xyxy, xyxy2ltwh, xyxy2xywh
+from .ops import ltwh2xywh, ltwh2xyxy, xywh2ltwh, xywh2xyxy, xyxy2ltwh, xyxy2xywh
 
 
 def _ntuple(n):
@@ -196,13 +196,7 @@ class Instances:
         self.keypoints = keypoints
         self.normalized = normalized
 
-        if len(segments) > 0:
-            # list[np.array(1000, 2)] * num_samples
-            segments = resample_segments(segments)
-            # (N, 1000, 2)
-            segments = np.stack(segments, axis=0)
-        else:
-            segments = np.zeros((0, 1000, 2), dtype=np.float32)
+        segments = np.zeros((0, 1000, 2), dtype=np.float32)
         self.segments = segments
 
     def convert_bbox(self, format):

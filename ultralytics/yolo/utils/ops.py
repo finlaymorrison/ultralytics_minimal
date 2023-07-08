@@ -473,43 +473,6 @@ def ltwh2xyxy(x):
     return y
 
 
-def segments2boxes(segments):
-    """
-    It converts segment labels to box labels, i.e. (cls, xy1, xy2, ...) to (cls, xywh)
-
-    Args:
-      segments (list): list of segments, each segment is a list of points, each point is a list of x, y coordinates
-
-    Returns:
-      (np.ndarray): the xywh coordinates of the bounding boxes.
-    """
-    boxes = []
-    for s in segments:
-        x, y = s.T  # segment xy
-        boxes.append([x.min(), y.min(), x.max(), y.max()])  # cls, xyxy
-    return xyxy2xywh(np.array(boxes))  # cls, xywh
-
-
-def resample_segments(segments, n=1000):
-    """
-    Inputs a list of segments (n,2) and returns a list of segments (n,2) up-sampled to n points each.
-
-    Args:
-      segments (list): a list of (n,2) arrays, where n is the number of points in the segment.
-      n (int): number of points to resample the segment to. Defaults to 1000
-
-    Returns:
-      segments (list): the resampled segments.
-    """
-    for i, s in enumerate(segments):
-        s = np.concatenate((s, s[0:1, :]), axis=0)
-        x = np.linspace(0, len(s) - 1, n)
-        xp = np.arange(len(s))
-        segments[i] = np.concatenate([np.interp(x, xp, s[:, i]) for i in range(2)],
-                                     dtype=np.float32).reshape(2, -1).T  # segment xy
-    return segments
-
-
 def crop_mask(masks, boxes):
     """
     It takes a mask and a bounding box, and returns a mask that is cropped to the bounding box
@@ -606,63 +569,6 @@ def process_mask_native(protos, masks_in, bboxes, shape):
     masks = F.interpolate(masks[None], shape, mode='bilinear', align_corners=False)[0]  # CHW
     masks = crop_mask(masks, bboxes)  # CHW
     return masks.gt_(0.5)
-
-
-def scale_coords(img1_shape, coords, img0_shape, ratio_pad=None, normalize=False):
-    """
-    Rescale segment coordinates (xyxy) from img1_shape to img0_shape
-
-    Args:
-      img1_shape (tuple): The shape of the image that the coords are from.
-      coords (torch.Tensor): the coords to be scaled
-      img0_shape (tuple): the shape of the image that the segmentation is being applied to
-      ratio_pad (tuple): the ratio of the image size to the padded image size.
-      normalize (bool): If True, the coordinates will be normalized to the range [0, 1]. Defaults to False
-
-    Returns:
-      coords (torch.Tensor): the segmented image.
-    """
-    if ratio_pad is None:  # calculate from img0_shape
-        gain = min(img1_shape[0] / img0_shape[0], img1_shape[1] / img0_shape[1])  # gain  = old / new
-        pad = (img1_shape[1] - img0_shape[1] * gain) / 2, (img1_shape[0] - img0_shape[0] * gain) / 2  # wh padding
-    else:
-        gain = ratio_pad[0][0]
-        pad = ratio_pad[1]
-
-    coords[..., 0] -= pad[0]  # x padding
-    coords[..., 1] -= pad[1]  # y padding
-    coords[..., 0] /= gain
-    coords[..., 1] /= gain
-    clip_coords(coords, img0_shape)
-    if normalize:
-        coords[..., 0] /= img0_shape[1]  # width
-        coords[..., 1] /= img0_shape[0]  # height
-    return coords
-
-
-def masks2segments(masks, strategy='largest'):
-    """
-    It takes a list of masks(n,h,w) and returns a list of segments(n,xy)
-
-    Args:
-      masks (torch.Tensor): the output of the model, which is a tensor of shape (batch_size, 160, 160)
-      strategy (str): 'concat' or 'largest'. Defaults to largest
-
-    Returns:
-      segments (List): list of segment masks
-    """
-    segments = []
-    for x in masks.int().cpu().numpy().astype('uint8'):
-        c = cv2.findContours(x, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)[0]
-        if c:
-            if strategy == 'concat':  # concatenate all segments
-                c = np.concatenate([x.reshape(-1, 2) for x in c])
-            elif strategy == 'largest':  # select largest segment
-                c = np.array(c[np.array([len(x) for x in c]).argmax()]).reshape(-1, 2)
-        else:
-            c = np.zeros((0, 2))  # no segments found
-        segments.append(c.astype('float32'))
-    return segments
 
 
 def clean_str(s):

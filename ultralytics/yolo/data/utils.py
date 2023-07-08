@@ -20,8 +20,7 @@ from ultralytics.nn.autobackend import check_class_names
 from ultralytics.yolo.utils import (DATASETS_DIR, LOGGER, NUM_THREADS, ROOT, SETTINGS_YAML, clean_url, colorstr, emojis,
                                     yaml_load)
 from ultralytics.yolo.utils.checks import check_file, check_font, is_ascii
-from ultralytics.yolo.utils.downloads import download, safe_download, unzip_file
-from ultralytics.yolo.utils.ops import segments2boxes
+from ultralytics.yolo.utils.downloads import download, safe_download
 
 HELP_URL = 'See https://docs.ultralytics.com/yolov5/tutorials/train_custom_data'
 IMG_FORMATS = 'bmp', 'dng', 'jpeg', 'jpg', 'mpo', 'png', 'tif', 'tiff', 'webp', 'pfm'  # image suffixes
@@ -85,10 +84,6 @@ def verify_image_label(args):
             nf = 1  # label found
             with open(lb_file) as f:
                 lb = [x.split() for x in f.read().strip().splitlines() if len(x)]
-                if any(len(x) > 6 for x in lb) and (not keypoint):  # is segment
-                    classes = np.array([x[0] for x in lb], dtype=np.float32)
-                    segments = [np.array(x[1:], dtype=np.float32).reshape(-1, 2) for x in lb]  # (cls, xy1...)
-                    lb = np.concatenate((classes.reshape(-1, 1), segments2boxes(segments)), 1)  # (cls, xywh)
                 lb = np.array(lb, dtype=np.float32)
             nl = len(lb)
             if nl:
