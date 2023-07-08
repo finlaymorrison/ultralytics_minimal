@@ -6,7 +6,6 @@ import numpy as np
 from ultralytics.nn.tasks import DetectionModel
 from ultralytics.yolo import v8
 from ultralytics.yolo.data import build_dataloader, build_yolo_dataset
-from ultralytics.yolo.data.dataloaders.v5loader import create_dataloader
 from ultralytics.yolo.engine.trainer import BaseTrainer
 from ultralytics.yolo.utils import DEFAULT_CFG, LOGGER, RANK, colorstr
 from ultralytics.yolo.utils.plotting import plot_images, plot_labels, plot_results

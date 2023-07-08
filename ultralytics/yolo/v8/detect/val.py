@@ -7,7 +7,6 @@ import numpy as np
 import torch
 
 from ultralytics.yolo.data import build_dataloader, build_yolo_dataset
-from ultralytics.yolo.data.dataloaders.v5loader import create_dataloader
 from ultralytics.yolo.engine.validator import BaseValidator
 from ultralytics.yolo.utils import DEFAULT_CFG, LOGGER, colorstr, ops
 from ultralytics.yolo.utils.checks import check_requirements
