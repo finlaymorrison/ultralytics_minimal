@@ -396,15 +396,6 @@ def check_amp(model):
     return True
 
 
-def git_describe(path=ROOT):  # path must be a directory
-    # Return human-readable git description, i.e. v5.0-5-g3e25f1e https://git-scm.com/docs/git-describe
-    try:
-        assert (Path(path) / '.git').is_dir()
-        return subprocess.check_output(f'git -C {path} describe --tags --long --always', shell=True).decode()[:-1]
-    except AssertionError:
-        return ''
-
-
 def print_args(args: Optional[dict] = None, show_file=True, show_func=False):
     """Print function arguments (optional args dict)."""
 

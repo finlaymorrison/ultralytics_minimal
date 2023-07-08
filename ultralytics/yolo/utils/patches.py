@@ -13,9 +13,9 @@ import torch
 _imshow = cv2.imshow  # copy to avoid recursion errors
 
 
+
 def imread(filename, flags=cv2.IMREAD_COLOR):
     return cv2.imdecode(np.fromfile(filename, np.uint8), flags)
-
 
 def imwrite(filename, img):
     try:
