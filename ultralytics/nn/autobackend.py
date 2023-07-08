@@ -92,8 +92,6 @@ class AutoBackend(nn.Module):
         if nn_module:
             model = weights.to(device)
             model = model.fuse(verbose=verbose) if fuse else model
-            if hasattr(model, 'kpt_shape'):
-                kpt_shape = model.kpt_shape  # pose-only
             stride = max(int(model.stride.max()), 32)  # model stride
             names = model.module.names if hasattr(model, 'module') else model.names  # get class names
             model.half() if fp16 else model.float()
@@ -105,8 +103,6 @@ class AutoBackend(nn.Module):
                                          device=device,
                                          inplace=True,
                                          fuse=fuse)
-            if hasattr(model, 'kpt_shape'):
-                kpt_shape = model.kpt_shape  # pose-only
             stride = max(int(model.stride.max()), 32)  # model stride
             names = model.module.names if hasattr(model, 'module') else model.names  # get class names
             model.half() if fp16 else model.float()
@@ -346,10 +342,6 @@ class AutoBackend(nn.Module):
                 box = xywh2xyxy(y['coordinates'] * [[w, h, w, h]])  # xyxy pixels
                 conf, cls = y['confidence'].max(1), y['confidence'].argmax(1).astype(np.float)
                 y = np.concatenate((box, conf.reshape(-1, 1), cls.reshape(-1, 1)), 1)
-            elif len(y) == 1:  # classification model
-                y = list(y.values())
-            elif len(y) == 2:  # segmentation model
-                y = list(reversed(y.values()))  # reversed for segmentation models (pred, proto)
         elif self.paddle:  # PaddlePaddle
             im = im.cpu().numpy().astype(np.float32)
             self.input_handle.copy_from_cpu(im)

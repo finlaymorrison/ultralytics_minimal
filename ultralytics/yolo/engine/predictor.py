@@ -105,7 +105,6 @@ class BasePredictor:
         self.results = None
         self.transforms = None
         self.callbacks = _callbacks or callbacks.get_default_callbacks()
-        callbacks.add_integration_callbacks(self)
 
     def get_save_dir(self):
         project = self.args.project or Path(SETTINGS['runs_dir']) / self.args.task
@@ -224,7 +223,7 @@ class BasePredictor:
         # Check if save_dir/ label file exists
         if self.args.save or self.args.save_txt:
             (self.save_dir / 'labels' if self.args.save_txt else self.save_dir).mkdir(parents=True, exist_ok=True)
-
+        
         # Warmup model
         if not self.done_warmup:
             self.model.warmup(imgsz=(1 if self.model.pt or self.model.triton else self.dataset.bs, 3, *self.imgsz))
@@ -232,6 +231,7 @@ class BasePredictor:
 
         self.seen, self.windows, self.batch, profilers = 0, [], None, (ops.Profile(), ops.Profile(), ops.Profile())
         self.run_callbacks('on_predict_start')
+
         for batch in self.dataset:
             self.run_callbacks('on_predict_batch_start')
             self.batch = batch
@@ -254,6 +254,7 @@ class BasePredictor:
 
             # Visualize, save, write results
             n = len(im0s)
+            
             for i in range(n):
                 self.seen += 1
                 self.results[i].speed = {
@@ -271,8 +272,9 @@ class BasePredictor:
                     self.show(p)
                 if self.args.save and self.plotted_img is not None:
                     self.save_preds(vid_cap, i, str(self.save_dir / p.name))
-
+            
             self.run_callbacks('on_predict_batch_end')
+            
             yield from self.results
 
             # Print time (inference-only)

@@ -90,35 +90,33 @@ class Results(SimpleClass):
         _keys (tuple): A tuple of attribute names for non-empty attributes.
     """
 
-    def __init__(self, orig_img, path, names, boxes=None, masks=None, probs=None, keypoints=None) -> None:
+    def __init__(self, orig_img, path, names, boxes=None, masks=None) -> None:
         """Initialize the Results class."""
         self.orig_img = orig_img
         self.orig_shape = orig_img.shape[:2]
         self.boxes = Boxes(boxes, self.orig_shape) if boxes is not None else None  # native size boxes
         self.masks = Masks(masks, self.orig_shape) if masks is not None else None  # native size or imgsz masks
-        self.probs = Probs(probs) if probs is not None else None
-        self.keypoints = Keypoints(keypoints, self.orig_shape) if keypoints is not None else None
         self.speed = {'preprocess': None, 'inference': None, 'postprocess': None}  # milliseconds per image
         self.names = names
         self.path = path
         self.save_dir = None
-        self._keys = ('boxes', 'masks', 'probs', 'keypoints')
+        self._keys = ('boxes', 'masks')
+
+    def keys(self):
+        """Return a list of non-empty attribute names."""
+        return [k for k in self._keys if getattr(self, k) is not None]
 
     def __getitem__(self, idx):
         """Return a Results object for the specified index."""
         r = self.new()
-        for k in self.keys:
+        for k in self.keys():
             setattr(r, k, getattr(self, k)[idx])
         return r
 
-    def update(self, boxes=None, masks=None, probs=None):
+    def update(self, boxes=None):
         """Update the boxes, masks, and probs attributes of the Results object."""
         if boxes is not None:
             self.boxes = Boxes(boxes, self.orig_shape)
-        if masks is not None:
-            self.masks = Masks(masks, self.orig_shape)
-        if probs is not None:
-            self.probs = probs
 
     def cpu(self):
         """Return a copy of the Results object with all tensors on CPU memory."""
@@ -130,37 +128,32 @@ class Results(SimpleClass):
     def numpy(self):
         """Return a copy of the Results object with all tensors as numpy arrays."""
         r = self.new()
-        for k in self.keys:
+        for k in self.keys():
             setattr(r, k, getattr(self, k).numpy())
         return r
 
     def cuda(self):
         """Return a copy of the Results object with all tensors on GPU memory."""
         r = self.new()
-        for k in self.keys:
+        for k in self.keys():
             setattr(r, k, getattr(self, k).cuda())
         return r
 
     def to(self, *args, **kwargs):
         """Return a copy of the Results object with tensors on the specified device and dtype."""
         r = self.new()
-        for k in self.keys:
+        for k in self.keys():
             setattr(r, k, getattr(self, k).to(*args, **kwargs))
         return r
 
     def __len__(self):
         """Return the number of detections in the Results object."""
-        for k in self.keys:
+        for k in self.keys():
             return len(getattr(self, k))
 
     def new(self):
         """Return a new Results object with the same image, path, and names."""
         return Results(orig_img=self.orig_img, path=self.path, names=self.names)
-
-    @property
-    def keys(self):
-        """Return a list of non-empty attribute names."""
-        return [k for k in self._keys if getattr(self, k) is not None]
 
     def plot(
             self,
@@ -221,8 +214,7 @@ class Results(SimpleClass):
                               example=names)
         pred_boxes, show_boxes = self.boxes, boxes
         pred_masks, show_masks = self.masks, masks
-        pred_probs, show_probs = self.probs, probs
-        keypoints = self.keypoints
+
         if pred_masks and show_masks:
             if img_gpu is None:
                 img = LetterBox(pred_masks.shape[1:])(image=annotator.result())
@@ -238,14 +230,6 @@ class Results(SimpleClass):
                 label = (f'{name} {conf:.2f}' if conf else name) if labels else None
                 annotator.box_label(d.xyxy.squeeze(), label, color=colors(c, True))
 
-        if pred_probs is not None and show_probs:
-            text = f"{', '.join(f'{names[j] if names else j} {pred_probs.data[j]:.2f}' for j in pred_probs.top5)}, "
-            annotator.text((32, 32), text, txt_color=(255, 255, 255))  # TODO: allow setting colors
-
-        if keypoints is not None:
-            for k in reversed(keypoints.data):
-                annotator.kpts(k, self.orig_shape, kpt_line=kpt_line)
-
         return annotator.result()
 
     def verbose(self):
@@ -253,12 +237,9 @@ class Results(SimpleClass):
         Return log string for each task.
         """
         log_string = ''
-        probs = self.probs
         boxes = self.boxes
         if len(self) == 0:
-            return log_string if probs is not None else f'{log_string}(no detections), '
-        if probs is not None:
-            log_string += f"{', '.join(f'{self.names[j]} {probs.data[j]:.2f}' for j in probs.top5)}, "
+            f'{log_string}(no detections), '
         if boxes:
             for c in boxes.cls.unique():
                 n = (boxes.cls == c).sum()  # detections per class
@@ -275,13 +256,8 @@ class Results(SimpleClass):
         """
         boxes = self.boxes
         masks = self.masks
-        probs = self.probs
-        kpts = self.keypoints
         texts = []
-        if probs is not None:
-            # Classify
-            [texts.append(f'{probs.data[j]:.2f} {self.names[j]}') for j in probs.top5]
-        elif boxes:
+        if boxes:
             # Detect/segment/pose
             for j, d in enumerate(boxes):
                 c, conf, id = int(d.cls), float(d.conf), None if d.id is None else int(d.id.item())
@@ -307,9 +283,6 @@ class Results(SimpleClass):
             save_dir (str | pathlib.Path): Save path.
             file_name (str | pathlib.Path): File name.
         """
-        if self.probs is not None:
-            LOGGER.warning('WARNING ⚠️ Classify task do not support `save_crop`.')
-            return
         if isinstance(save_dir, str):
             save_dir = Path(save_dir)
         if isinstance(file_name, str):
@@ -338,9 +311,6 @@ class Results(SimpleClass):
             if self.masks:
                 x, y = self.masks.xy[i][:, 0], self.masks.xy[i][:, 1]  # numpy array
                 result['segments'] = {'x': (x / w).tolist(), 'y': (y / h).tolist()}
-            if self.keypoints is not None:
-                x, y, visible = self.keypoints[i].data[0].cpu().unbind(dim=1)  # torch Tensor
-                result['keypoints'] = {'x': (x / w).tolist(), 'y': (y / h).tolist(), 'visible': visible.tolist()}
             results.append(result)
 
         # Convert detections to JSON

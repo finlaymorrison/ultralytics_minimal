@@ -432,18 +432,10 @@ def plot_results(file='path/to/results.csv', dir='', segment=False, pose=False, 
     """Plot training results.csv. Usage: from utils.plots import *; plot_results('path/to/results.csv')."""
     import pandas as pd
     save_dir = Path(file).parent if file else Path(dir)
-    if classify:
-        fig, ax = plt.subplots(2, 2, figsize=(6, 6), tight_layout=True)
-        index = [1, 4, 2, 3]
-    elif segment:
-        fig, ax = plt.subplots(2, 8, figsize=(18, 6), tight_layout=True)
-        index = [1, 2, 3, 4, 5, 6, 9, 10, 13, 14, 15, 16, 7, 8, 11, 12]
-    elif pose:
-        fig, ax = plt.subplots(2, 9, figsize=(21, 6), tight_layout=True)
-        index = [1, 2, 3, 4, 5, 6, 7, 10, 11, 14, 15, 16, 17, 18, 8, 9, 12, 13]
-    else:
-        fig, ax = plt.subplots(2, 5, figsize=(12, 6), tight_layout=True)
-        index = [1, 2, 3, 4, 5, 8, 9, 10, 6, 7]
+
+    fig, ax = plt.subplots(2, 5, figsize=(12, 6), tight_layout=True)
+    index = [1, 2, 3, 4, 5, 8, 9, 10, 6, 7]
+
     ax = ax.ravel()
     files = list(save_dir.glob('results*.csv'))
     assert len(files), f'No results.csv files found in {save_dir.resolve()}, nothing to plot.'
@@ -492,7 +484,7 @@ def feature_visualization(x, module_type, stage, n=32, save_dir=Path('runs/detec
         n (int, optional): Maximum number of feature maps to plot. Defaults to 32.
         save_dir (Path, optional): Directory to save results. Defaults to Path('runs/detect/exp').
     """
-    for m in ['Detect', 'Pose', 'Segment']:
+    for m in ['Detect']:
         if m in module_type:
             return
     batch, channels, height, width = x.shape  # batch, channels, height, width

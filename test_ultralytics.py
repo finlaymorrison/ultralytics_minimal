@@ -18,6 +18,8 @@ args = parser.parse_args()
 def main(args):
     model = YOLO(f"{DATASET_DIR}/{args.data}/yolov8{args.variant}.yaml")
     model.train(data=f"{DATASET_DIR}/{args.data}/dataset.yaml", epochs=args.epochs, batch=args.batch, name=f"{args.data}-{args.variant}-{args.epochs}-{args.batch}")
+    things = [os.path.join("datasets/V1.3/test/images", img) for img in os.listdir("datasets/V1.3/test/images")]
+    results = model(things)
 
 if __name__ == "__main__":
     main(args)

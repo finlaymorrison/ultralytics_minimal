@@ -13,34 +13,6 @@ from ..utils import LOGGER, colorstr
 from ..utils.checks import check_version
 from ..utils.instance import Instances
 from ..utils.metrics import bbox_ioa
-from .utils import polygons2masks, polygons2masks_overlap
-
-POSE_FLIPLR_INDEX = [0, 2, 1, 4, 3, 6, 5, 8, 7, 10, 9, 12, 11, 14, 13, 16, 15]
-
-# TODO: we might need a BaseTransform to make all these augments be compatible with both classification and semantic
-class BaseTransform:
-
-    def __init__(self) -> None:
-        print("RJKADSJFD:AS"*100)
-        pass
-
-    def apply_image(self, labels):
-        """Applies image transformation to labels."""
-        pass
-
-    def apply_instances(self, labels):
-        """Applies transformations to input 'labels' and returns object instances."""
-        pass
-
-    def apply_semantic(self, labels):
-        """Applies semantic segmentation to an image."""
-        pass
-
-    def __call__(self, labels):
-        """Applies label transformations to an image, instances and semantic masks."""
-        self.apply_image(labels)
-        self.apply_instances(labels)
-        self.apply_semantic(labels)
 
 
 class Compose:

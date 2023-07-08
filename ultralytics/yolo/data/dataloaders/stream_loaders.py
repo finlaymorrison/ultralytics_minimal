@@ -15,10 +15,11 @@ import requests
 import torch
 from PIL import Image
 
-from ultralytics.yolo.data.utils import IMG_FORMATS, VID_FORMATS
+from ultralytics.yolo.data.utils import IMG_FORMATS
 from ultralytics.yolo.utils import LOGGER, ROOT, is_colab, is_kaggle, ops
 from ultralytics.yolo.utils.checks import check_requirements
 
+VID_FORMATS = []
 
 @dataclass
 class SourceTypes:
